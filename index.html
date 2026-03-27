@@ -1,1 +1,1058 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EDGE Idea Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Petrona:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: #fafbfc; color: #1a1a2e; line-height: 1.6; }
+
+        /* ── Hero ── */
+        .hero {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            color: white; padding: 3rem 2rem; text-align: center; position: relative; overflow: hidden;
+        }
+        .hero::before {
+            content: ''; position: absolute; inset: 0;
+            background: url('data:image/svg+xml,<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="30" r="1.5" fill="white" opacity="0.1"/></svg>');
+            animation: drift 60s linear infinite;
+        }
+        @keyframes drift { 0% { transform: translateX(0) translateY(0); } 100% { transform: translateX(60px) translateY(60px); } }
+        .hero-content { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; }
+        .hero h1 { font-family: 'Petrona', serif; font-size: 3.5rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.02em; }
+        .hero-subtitle { font-size: 1.25rem; opacity: 0.9; margin-bottom: 0.5rem; }
+        .last-updated  { font-size: 0.875rem; opacity: 0.7; font-style: italic; }
+        .admin-link { position: absolute; bottom: 0.75rem; right: 1rem; color: rgba(255,255,255,0.2); font-size: 0.75rem; text-decoration: none; z-index: 2; transition: color 0.2s; }
+        .admin-link:hover { color: rgba(255,255,255,0.55); }
+
+        /* ── Layout ── */
+        .container { max-width: 1200px; margin: -2rem auto 4rem; padding: 0 2rem; }
+        .card { background: white; border-radius: 16px; padding: 2.5rem; box-shadow: 0 4px 6px rgba(0,0,0,.05), 0 10px 20px rgba(0,0,0,.05); margin-bottom: 2rem; }
+        .step-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
+        .step-number { width: 48px; height: 48px; flex-shrink: 0; background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.5rem; }
+        .step-title { font-family: 'Petrona', serif; font-size: 2rem; font-weight: 600; color: #0f172a; }
+
+        /* ── User type ── */
+        .user-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+        .user-type-btn { border: 2px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; background: white; cursor: pointer; text-align: left; transition: all 0.3s ease; font-family: 'DM Sans', sans-serif; }
+        .user-type-btn:hover { border-color: #0ea5e9; box-shadow: 0 4px 12px rgba(14,165,233,.15); transform: translateY(-2px); }
+        .user-type-btn.selected { border-color: #0ea5e9; border-width: 3px; background: #f0f9ff; }
+        .user-type-icon  { margin-bottom: 0.75rem; }
+        .user-type-title { font-weight: 700; font-size: 1.125rem; color: #0f172a; margin-bottom: 0.5rem; }
+        .user-type-desc  { font-size: 0.9rem; color: #64748b; line-height: 1.5; }
+
+        /* ── Email area ── */
+        .email-area { display: none; }
+        .email-area.visible { display: block; }
+        .email-hint { background: #f8fafc; border-left: 4px solid #0ea5e9; border-radius: 0 8px 8px 0; padding: 1rem 1.25rem; margin-bottom: 1.25rem; color: #475569; font-size: 0.9375rem; }
+        .email-hint strong { color: #0c4a6e; }
+        .search-input { width: 100%; padding: 1rem 1.5rem; font-size: 1.125rem; border: 2px solid #e2e8f0; border-radius: 12px; font-family: 'DM Sans', sans-serif; transition: all 0.3s ease; }
+        .search-input:focus { outline: none; border-color: #0ea5e9; box-shadow: 0 0 0 4px rgba(14,165,233,.1); }
+        .selected-faculty-display { display: none; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #0ea5e9; border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; }
+        .selected-faculty-display.active { display: block; }
+        .selected-faculty-name { font-family: 'Petrona', serif; font-size: 1.5rem; font-weight: 600; color: #0c4a6e; margin-bottom: 0.5rem; }
+        .selected-faculty-details { color: #075985; }
+
+        /* ── Filters & ranking ── */
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .filter-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .filter-label { font-weight: 600; color: #334155; font-size: 0.875rem; text-transform: uppercase; letter-spacing: .05em; }
+        .filter-select { padding: .75rem 1rem; border: 2px solid #e2e8f0; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 1rem; transition: all .3s; }
+        .filter-select:focus { outline: none; border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14,165,233,.1); }
+        .ranking-area  { background: #f8fafc; border-radius: 12px; padding: 2rem; }
+        .ranking-intro { margin-bottom: 1.5rem; color: #475569; }
+        .ranking-list  { display: flex; flex-direction: column; gap: .75rem; }
+        .ranking-item { display: flex; align-items: center; gap: 1rem; background: white; padding: 1rem 1.25rem; border-radius: 10px; cursor: move; border: 2px solid #e2e8f0; transition: all .2s; }
+        .ranking-item:hover { border-color: #0ea5e9; box-shadow: 0 2px 8px rgba(14,165,233,.15); }
+        .ranking-item.sortable-ghost { opacity: .4; }
+        .ranking-item.sortable-drag  { transform: rotate(2deg); box-shadow: 0 8px 20px rgba(0,0,0,.15); }
+        .rank-badge { width: 32px; height: 32px; flex-shrink: 0; background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%); color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+        .rank-text  { flex: 1; }
+        .rank-title { font-weight: 600; color: #0f172a; margin-bottom: .25rem; }
+        .rank-desc  { font-size: .875rem; color: #64748b; }
+        .drag-icon  { color: #cbd5e1; font-size: 1.25rem; }
+
+        /* ── Buttons ── */
+        .btn { padding: 1rem 2rem; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 1rem; cursor: pointer; transition: all .3s; display: inline-flex; align-items: center; gap: .5rem; }
+        .btn-primary   { background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%); color: white; box-shadow: 0 4px 12px rgba(14,165,233,.3); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(14,165,233,.4); }
+        .btn-success   { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; box-shadow: 0 4px 12px rgba(16,185,129,.3); }
+        .btn-success:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16,185,129,.4); }
+        .btn-outline   { background: white; color: #475569; border: 2px solid #e2e8f0; }
+        .btn-outline:hover { border-color: #0ea5e9; color: #0ea5e9; }
+        .btn-secondary { background: #f1f5f9; color: #475569; }
+        .btn-secondary:hover { background: #e2e8f0; }
+        .btn-danger    { background: white; color: #dc2626; border: 2px solid #fecaca; }
+        .btn-danger:hover { background: #fef2f2; border-color: #dc2626; }
+
+        /* ── Matches ── */
+        .hidden { display: none; }
+        .matches-section { display: none; }
+        .matches-section.active { display: block; }
+        .match-card { background: white; border: 2px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; transition: all .3s; cursor: pointer; }
+        .match-card:hover { border-color: #0ea5e9; box-shadow: 0 4px 16px rgba(14,165,233,.15); transform: translateY(-2px); }
+        .match-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+        .match-score  { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: .5rem 1rem; border-radius: 8px; font-weight: 700; font-size: 1.125rem; }
+        .match-name   { font-family: 'Petrona', serif; font-size: 1.5rem; font-weight: 600; color: #0f172a; margin-bottom: .5rem; }
+        .match-campus { color: #0ea5e9; font-weight: 600; margin-bottom: .75rem; }
+        .match-themes { color: #64748b; font-size: .9375rem; line-height: 1.6; margin-bottom: 1rem; }
+        .match-highlights { display: flex; flex-wrap: wrap; gap: .5rem; }
+        .highlight-tag { background: #f0fdf4; color: #166534; padding: .375rem .75rem; border-radius: 6px; font-size: .8125rem; font-weight: 500; }
+
+        /* ── Concept cards (radio style) ── */
+        .concept-card { background: white; border: 2px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; transition: all .3s; cursor: pointer; }
+        .concept-card:hover   { border-color: #0ea5e9; box-shadow: 0 4px 12px rgba(14,165,233,.15); }
+        .concept-card.selected { background: #f0f9ff; border-color: #0ea5e9; border-width: 3px; }
+        .concept-header    { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; }
+        .concept-radio     { width: 22px; height: 22px; margin-top: .3rem; flex-shrink: 0; accent-color: #0ea5e9; cursor: pointer; }
+        .concept-title     { font-family: 'Petrona', serif; font-size: 1.375rem; font-weight: 600; color: #0f172a; margin-bottom: .5rem; flex: 1; }
+        .concept-subtitle  { color: #0ea5e9; font-size: .9375rem; font-style: italic; margin-bottom: 1rem; }
+        .concept-description { color: #475569; line-height: 1.7; margin-bottom: 1rem; }
+        .concept-tags { display: flex; flex-wrap: wrap; gap: .5rem; }
+        .concept-tag      { background: #f1f5f9; color: #475569; padding: .375rem .75rem; border-radius: 6px; font-size: .8125rem; font-weight: 500; }
+        .concept-tag.sdg  { background: #dbeafe; color: #1e40af; }
+        .concept-tag.aacu { background: #fef3c7; color: #92400e; }
+        .concept-tag.nace { background: #e0e7ff; color: #3730a3; }
+
+        /* ── Full description panel ── */
+        .full-desc-panel { background: #f8fafc; border-radius: 12px; padding: 2rem; margin-bottom: 2rem; }
+        .full-desc-section { margin-bottom: 1.75rem; }
+        .full-desc-section:last-child { margin-bottom: 0; }
+        .full-desc-label { font-weight: 700; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: .07em; color: #0ea5e9; margin-bottom: .5rem; }
+        .full-desc-title { font-family: 'Petrona', serif; font-size: 1.75rem; font-weight: 700; color: #0f172a; margin-bottom: .25rem; }
+        .full-desc-subtitle { color: #475569; font-style: italic; font-size: 1rem; margin-bottom: 1rem; }
+        .full-desc-anchor { background: #f0f9ff; border-left: 4px solid #0ea5e9; border-radius: 0 8px 8px 0; padding: 1rem 1.25rem; color: #0c4a6e; font-size: .9375rem; line-height: 1.7; }
+        .desc-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        .desc-grid-item { background: white; border-radius: 10px; padding: 1.25rem; border: 1px solid #e2e8f0; }
+        .desc-grid-item h4 { font-weight: 700; color: #0f172a; margin-bottom: .75rem; font-size: .9375rem; }
+        .desc-grid-item ul { padding-left: 1.25rem; color: #475569; font-size: .9rem; line-height: 1.7; }
+        .tag-row { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+        /* ── Action buttons row ── */
+        .action-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; }
+
+        /* ── Feedback panel ── */
+        .feedback-panel { background: #fff7ed; border: 2px solid #fed7aa; border-radius: 12px; padding: 2rem; margin-top: 1.5rem; }
+        .feedback-panel h3 { font-family: 'Petrona', serif; color: #9a3412; margin-bottom: .75rem; }
+        .feedback-select { width: 100%; padding: .75rem 1rem; border: 2px solid #e2e8f0; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 1rem; margin-bottom: 1rem; }
+        .feedback-textarea { width: 100%; padding: .75rem 1rem; border: 2px solid #e2e8f0; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: .9375rem; min-height: 100px; resize: vertical; margin-bottom: 1rem; }
+        .feedback-textarea:focus, .feedback-select:focus { outline: none; border-color: #0ea5e9; }
+
+        /* ── Confirmation / thank-you ── */
+        .confirm-panel { text-align: center; padding: 3rem 2rem; }
+        .confirm-icon { font-size: 4rem; margin-bottom: 1rem; }
+        .confirm-title { font-family: 'Petrona', serif; font-size: 2rem; font-weight: 700; color: #0f172a; margin-bottom: .75rem; }
+        .confirm-text  { color: #475569; font-size: 1.0625rem; line-height: 1.7; max-width: 560px; margin: 0 auto 2rem; }
+
+        /* ── Loading ── */
+        .loading { text-align: center; padding: 3rem; }
+        .spinner { width: 50px; height: 50px; margin: 0 auto 1rem; border: 4px solid #e2e8f0; border-top-color: #0ea5e9; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Admin overlay ── */
+        .admin-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 100; align-items: center; justify-content: center; }
+        .admin-overlay.visible { display: flex; }
+        .admin-modal-wrap { position: relative; width: 100%; max-width: 520px; margin: 1rem; }
+        .admin-modal { background: white; border-radius: 16px; padding: 2.5rem; box-shadow: 0 20px 60px rgba(0,0,0,.3); position: relative; }
+        .admin-modal h2 { font-family: 'Petrona', serif; font-size: 1.75rem; color: #0f172a; margin-bottom: .5rem; }
+        .admin-modal > p { color: #64748b; margin-bottom: 1.5rem; }
+        .admin-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #94a3b8; line-height: 1; }
+        .admin-close:hover { color: #475569; }
+        .admin-input { width: 100%; padding: .875rem 1rem; border: 2px solid #e2e8f0; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 1rem; margin-bottom: 1rem; transition: all .3s; }
+        .admin-input:focus { outline: none; border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14,165,233,.1); }
+        .admin-section { display: none; margin-top: 1.5rem; border-top: 1px solid #e2e8f0; padding-top: 1.5rem; }
+        .admin-section.visible { display: block; }
+        .upload-zone { border: 2px dashed #cbd5e1; border-radius: 12px; padding: 2rem; text-align: center; cursor: pointer; transition: all .3s; margin-bottom: 1rem; }
+        .upload-zone:hover, .upload-zone.dragover { border-color: #0ea5e9; background: #f0f9ff; }
+        .upload-zone-icon { font-size: 2.5rem; margin-bottom: .75rem; }
+        .upload-zone-text { color: #475569; font-size: .9375rem; }
+        .upload-zone-text strong { color: #0ea5e9; }
+        .upload-status { background: #f0fdf4; border: 2px solid #10b981; border-radius: 8px; padding: 1rem; margin-top: 1rem; color: #065f46; display: none; }
+        .upload-status.visible { display: block; }
+        .upload-error  { background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 1rem; margin-top: 1rem; color: #991b1b; display: none; }
+        .upload-error.visible  { display: block; }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.5rem; }
+            .filter-grid { grid-template-columns: 1fr; }
+            .user-type-grid { grid-template-columns: 1fr; }
+            .desc-grid { grid-template-columns: 1fr; }
+            .action-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+    <div class="hero-content">
+        <h1>EDGE Idea Generator</h1>
+        <p class="hero-subtitle">Find potential collaboration partners &amp; generate project concepts</p>
+        <p class="last-updated" id="lastUpdated">Database last updated: —</p>
+    </div>
+    <a class="admin-link" href="#" onclick="openAdmin(); return false;">Admin</a>
+</div>
+
+<div class="container">
+
+    <!-- STEP 1: Who are you -->
+    <div class="card" id="step1">
+        <div class="step-header">
+            <div class="step-number">1</div>
+            <h2 class="step-title">Who are you?</h2>
+        </div>
+        <p style="color:#64748b; margin-bottom:1.5rem;">Select the option that describes you to get started.</p>
+
+        <div class="user-type-grid" id="userTypeGrid">
+            <button class="user-type-btn" id="btnPSU" onclick="selectUserType('psu')">
+                <div class="user-type-icon">
+                    <!-- Mortarboard icon -->
+                    <svg width="48" height="48" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="28" y="58" width="44" height="7" rx="2" fill="#1e3a5f"/>
+                        <polygon points="50,22 82,40 50,52 18,40" fill="#1e3a5f"/>
+                        <line x1="82" y1="40" x2="82" y2="64" stroke="#1e3a5f" stroke-width="4" stroke-linecap="round"/>
+                        <circle cx="82" cy="69" r="6" fill="#1e3a5f"/>
+                    </svg>
+                </div>
+                <div class="user-type-title">I am a Penn State faculty member</div>
+                <div class="user-type-desc">I have a Penn State email address and am looking for an international collaboration partner.</div>
+            </button>
+            <button class="user-type-btn" id="btnOther" onclick="selectUserType('other')">
+                <div class="user-type-icon">
+                    <svg width="48" height="48" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="#0ea5e9" stroke-width="5"/>
+                        <ellipse cx="50" cy="50" rx="16" ry="40" fill="none" stroke="#0ea5e9" stroke-width="4"/>
+                        <line x1="10" y1="50" x2="90" y2="50" stroke="#0ea5e9" stroke-width="4"/>
+                        <line x1="15" y1="28" x2="85" y2="28" stroke="#0ea5e9" stroke-width="3"/>
+                        <line x1="15" y1="72" x2="85" y2="72" stroke="#0ea5e9" stroke-width="3"/>
+                    </svg>
+                </div>
+                <div class="user-type-title">I am not a Penn State faculty member</div>
+                <div class="user-type-desc">I am faculty at another institution and have expressed interest in an EDGE collaboration.</div>
+            </button>
+        </div>
+
+        <div class="email-area" id="emailArea">
+            <div class="email-hint" id="emailHint"></div>
+            <input type="email" class="search-input" id="emailInput" placeholder="" autocomplete="email">
+            <button class="btn btn-primary" onclick="authenticateEmail()" style="margin-top:1rem; width:100%;">Continue →</button>
+        </div>
+
+        <div class="selected-faculty-display" id="selectedFacultyDisplay">
+            <div class="selected-faculty-name" id="selectedFacultyName"></div>
+            <div class="selected-faculty-details" id="selectedFacultyDetails"></div>
+        </div>
+        <div id="errorMessage" style="display:none; background:#fef2f2; border:2px solid #ef4444; border-radius:8px; padding:1rem; margin-top:1rem; color:#991b1b;"></div>
+    </div>
+
+    <!-- STEP 2: Filters -->
+    <div class="card hidden" id="step2">
+        <div class="step-header">
+            <div class="step-number">2</div>
+            <h2 class="step-title">What are you looking for in a partner?</h2>
+        </div>
+        <div class="filter-grid">
+            <div class="filter-group">
+                <label class="filter-label">Discipline</label>
+                <select class="filter-select" id="filterDiscipline">
+                    <option value="">Any discipline</option>
+                    <option value="same">Same discipline</option>
+                    <option value="different">Different discipline (interdisciplinary)</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Implementation Period</label>
+                <select class="filter-select" id="filterPeriod">
+                    <option value="">Any period</option>
+                    <option value="Fall 2026">Fall 2026</option>
+                    <option value="Spring 2027">Spring 2027</option>
+                    <option value="Summer 2027">Summer 2027</option>
+                    <option value="Fall 2027">Fall 2027</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Time Zone Preference</label>
+                <select class="filter-select" id="filterTimezone">
+                    <option value="">Any time zone</option>
+                    <option value="same">Same time zone (±2 hours)</option>
+                    <option value="workable">Workable overlap (±6 hours)</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Region</label>
+                <select class="filter-select" id="filterRegion">
+                    <option value="">Any region</option>
+                    <option value="North America">North America</option>
+                    <option value="Latin America">Latin America</option>
+                    <option value="Europe">Europe</option>
+                    <option value="Asia">Asia</option>
+                    <option value="Africa">Africa</option>
+                </select>
+            </div>
+        </div>
+        <div class="ranking-area">
+            <div class="ranking-intro"><strong>Rank your priorities:</strong> Drag to reorder what matters most when finding a partner.</div>
+            <div class="ranking-list" id="rankingList"></div>
+        </div>
+        <button class="btn btn-primary" onclick="findMatches()" style="margin-top:2rem;">Find Compatible Partners →</button>
+    </div>
+
+    <!-- STEP 3: Matches -->
+    <div class="card hidden matches-section" id="step3">
+        <div class="step-header">
+            <div class="step-number">3</div>
+            <h2 class="step-title">Your Top Matches</h2>
+        </div>
+        <div id="loadingMatches" class="loading"><div class="spinner"></div><p>Finding your best matches...</p></div>
+        <div id="matchesDisplay" class="hidden"></div>
+    </div>
+
+    <!-- STEP 4: Concept ideas -->
+    <div class="card hidden" id="step4">
+        <div class="step-header">
+            <div class="step-number">4</div>
+            <h2 class="step-title">Project Concept Ideas</h2>
+        </div>
+        <div id="partnershipSummary" style="background:#f0f9ff; border-left:4px solid #0ea5e9; padding:1.5rem; border-radius:8px; margin-bottom:2rem;"></div>
+        <div id="loadingConcepts" class="loading"><div class="spinner"></div><p id="conceptLoadingText">Analyzing your research backgrounds...</p></div>
+        <div id="conceptsDisplay" class="hidden">
+            <p style="color:#64748b; margin-bottom:1.5rem;">Select <strong>one concept</strong> you'd like to explore — then we'll build it out into a full project description.</p>
+            <div id="conceptsList"></div>
+            <button class="btn btn-primary hidden" onclick="buildOutConcept()" id="buildConceptBtn" style="margin-top:1rem;">
+                Build Out This Concept →
+            </button>
+        </div>
+    </div>
+
+    <!-- STEP 5: Full description + actions -->
+    <div class="card hidden" id="step5">
+        <div class="step-header">
+            <div class="step-number">5</div>
+            <h2 class="step-title">Your Project Concept</h2>
+        </div>
+
+        <div id="loadingFullDesc" class="loading"><div class="spinner"></div><p>Building your full project description...</p></div>
+
+        <div id="fullDescContent" class="hidden">
+            <div class="full-desc-panel" id="fullDescPanel"></div>
+
+            <div class="action-row">
+                <button class="btn btn-success" onclick="requestIntroduction()">✉ Request an Introduction</button>
+                <button class="btn btn-outline" id="downloadDocBtn" onclick="downloadWord()">⬇ Download as Word Doc</button>
+                <button class="btn btn-danger" onclick="showFeedback()">↩ Start Over &amp; Give Feedback</button>
+            </div>
+
+            <!-- Feedback panel (hidden until "Start Over" clicked) -->
+            <div class="feedback-panel hidden" id="feedbackPanel">
+                <h3>Help us improve — what held you back?</h3>
+                <p style="color:#9a3412; margin-bottom:1rem; font-size:.9375rem;">Your feedback helps us make better matches. This takes less than a minute.</p>
+                <select class="feedback-select" id="feedbackReason">
+                    <option value="">Select a reason...</option>
+                    <option value="timing">Timing doesn't work this semester</option>
+                    <option value="research">Need to learn more about their research first</option>
+                    <option value="partner">Prefer a different partner</option>
+                    <option value="notready">Not ready to commit to a project yet</option>
+                    <option value="other">Other</option>
+                </select>
+                <textarea class="feedback-textarea" id="feedbackText" placeholder="Any additional comments? (optional)"></textarea>
+                <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                    <button class="btn btn-primary" onclick="submitFeedback()">Submit &amp; Start Over</button>
+                    <button class="btn btn-secondary" onclick="hideFeedback()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STEP 6: Confirmation -->
+    <div class="card hidden" id="step6">
+        <div class="confirm-panel" id="confirmPanel"></div>
+    </div>
+
+</div><!-- /container -->
+
+<!-- ADMIN OVERLAY -->
+<div class="admin-overlay" id="adminOverlay" onclick="handleOverlayClick(event)">
+    <div class="admin-modal-wrap">
+        <div class="admin-modal">
+            <button class="admin-close" onclick="closeAdmin()">×</button>
+            <h2>Admin Access</h2>
+            <p>Enter the admin password to manage the faculty database.</p>
+            <div id="adminLoginArea">
+                <input type="password" class="admin-input" id="adminPasswordInput" placeholder="Admin password" onkeypress="if(event.key==='Enter') checkAdminPassword()">
+                <button class="btn btn-primary" onclick="checkAdminPassword()" style="width:100%;">Sign In →</button>
+                <div id="adminLoginError" style="display:none; color:#991b1b; margin-top:.75rem; font-size:.9rem;">Incorrect password. Please try again.</div>
+            </div>
+            <div class="admin-section" id="adminPanel">
+                <h3 style="font-family:'Petrona',serif; color:#0f172a; margin-bottom:.5rem;">Update Faculty Database</h3>
+                <p style="color:#64748b; font-size:.875rem; margin-bottom:1rem;">
+                    Upload a CSV or Excel file to replace the current database. Required columns:
+                    <strong>name, email, campus, position, courses, themes, implementation, notes</strong>.
+                    The "last updated" timestamp updates automatically on upload.
+                </p>
+                <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+                    <div class="upload-zone-icon">📂</div>
+                    <div class="upload-zone-text"><strong>Click to browse</strong> or drag &amp; drop your file here<br><span style="font-size:.8rem; color:#94a3b8;">Accepts .csv or .xlsx</span></div>
+                </div>
+                <input type="file" id="fileInput" accept=".csv,.xlsx" style="display:none" onchange="handleFileSelect(event)">
+                <div class="upload-status" id="uploadStatus"></div>
+                <div class="upload-error"  id="uploadError"></div>
+                <div style="margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid #e2e8f0;">
+                    <p style="color:#64748b; font-size:.85rem; margin-bottom:.75rem;">Current database: <strong id="dbCount">—</strong> faculty records</p>
+                    <button class="btn btn-secondary" onclick="closeAdmin()" style="width:100%;">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+const ADMIN_PASSWORD    = 'edge2026';   // Change before wider rollout
+const COORDINATOR_EMAIL = 'edge@psu.edu';
+const SEED_DATE         = 'March 27, 2026';  // Update this when you refresh the seed data
+
+// ── State ──────────────────────────────────────────────────────────────────
+let facultyDatabase    = [];
+let currentUser        = null;
+let currentUserType    = null;
+let rankingOrder       = [];
+let selectedPartner    = null;
+let generatedConcepts  = [];
+let selectedConceptIdx = null;
+let builtConcept       = null;
+
+// ── Ranking factors ────────────────────────────────────────────────────────
+const rankingFactors = [
+    { id:'themes',            title:'Research/Teaching Overlap',   desc:'Shared or complementary interests' },
+    { id:'sdg',               title:'UN SDG Alignment',            desc:'Common sustainability goals' },
+    { id:'interdisciplinary', title:'Interdisciplinary Potential', desc:'Cross-disciplinary innovation' },
+    { id:'implementation',    title:'Schedule Compatibility',      desc:'Same implementation period' },
+    { id:'timezone',          title:'Time Zone Overlap',           desc:'Ease of synchronous meetings' },
+    { id:'aacu',              title:'AAC&U Learning Outcomes',     desc:'Shared global learning goals' },
+    { id:'nace',              title:'NACE Career Competencies',    desc:'Professional skill development' }
+];
+
+// ── Seed database ──────────────────────────────────────────────────────────
+const seedDatabase = [
+    { id:0, name:"Dr. Tiffany MacQuarrie",       email:"tls7@psu.edu",          campus:"Penn State University Park",        position:"Associate Professor of Education",              courses:"Educational Technology; Digital Learning; Instructional Design",       themes:"Online pedagogy, educational equity, accessibility in digital learning, universal design for learning (UDL), inclusive teaching practices", implementation:"Fall 2026, Spring 2027",       notes:"Director of Digital Learning Innovation Lab." },
+    { id:1, name:"Dr. Nikki Mattson",             email:"nla12@psu.edu",         campus:"Penn State University Park",        position:"Assistant Professor of Social Work",            courses:"Community Practice; Social Justice; Global Social Work",                themes:"Community organizing, refugee resettlement, trauma-informed practice, cross-cultural social work, human rights advocacy",                 implementation:"Spring 2027, Fall 2027",       notes:"Fulbright scholar. Works with refugee communities." },
+    { id:2, name:"Dr. Somjit Barat",              email:"sbarat@psu.edu",        campus:"Penn State Mont Alto",              position:"Associate Professor of Business",               courses:"Global Marketing; Business Ethics; International Business",             themes:"Medical tourism, ethics of outsourcing, surrogacy tourism, cross-cultural consumer behavior, IDEA in education",                        implementation:"Fall 2026, Spring 2027",       notes:"Coordinator of International & Intercultural Programs." },
+    { id:3, name:"Dr. Kallaya Tantiyaswasdikul",  email:"kallaya.t@tu.ac.th",    campus:"Thammasat University",              position:"Associate Professor, Architecture & Planning",  courses:"Design Thinking; Sustainable Built Environments; Urban Planning",       themes:"Foresight design thinking, inclusive innovation, sustainable development, scenario planning",                                             implementation:"Fall 2026, Spring 2027",       notes:"Oxford Scenarios Programme trained. Former Humphrey Fellow at Penn State." },
+    { id:4, name:"Prof. Donna Chambers",          email:"dchambers@psu.edu",     campus:"Penn State Berks",                  position:"Teaching Professor of Spanish",                 courses:"Spanish Language; Service-Learning; Community Engagement",             themes:"Service-learning, community-university partnerships, Latino engagement, bilingual education, social justice",                          implementation:"Spring 2027, Fall 2027",       notes:"Coordinator of Office of Community Engagement." },
+    { id:5, name:"Dr. Karla Miranda Benavides",   email:"karla.miranda@una.cr",  campus:"National University of Costa Rica", position:"Professor, Business Administration",            courses:"Marketing; Entrepreneurship; New Ventures & Growth",                   themes:"Small business development, youth entrepreneurship, design thinking in business education",                                            implementation:"Fall 2026, Spring 2027",       notes:"Former Humphrey Fellow at Penn State (2024-25)." },
+    { id:6, name:"Dr. Maria Santos",              email:"m.santos@usp.br",       campus:"University of São Paulo",           position:"Associate Professor of Anthropology",           courses:"Cultural Anthropology; Indigenous Studies; Environmental Anthropology", themes:"Indigenous rights, environmental justice, participatory research, decolonial pedagogy",                                                  implementation:"Fall 2026, Spring 2027, Summer 2027", notes:"Works extensively with Amazonian communities." },
+    { id:7, name:"Dr. Wei Chen",                  email:"wchen@ntu.edu.tw",      campus:"National Taiwan University",        position:"Assistant Professor of Computer Science",       courses:"Artificial Intelligence; Human-Computer Interaction; EdTech",          themes:"AI in education, learning analytics, accessible technology design, cross-cultural HCI",                                               implementation:"Spring 2027, Fall 2027",       notes:"Postdoc at MIT Media Lab. AI for social good." }
+];
+
+// ── Load database ──────────────────────────────────────────────────────────
+function loadDatabase() {
+    const stored = localStorage.getItem('edgeFacultyDatabase');
+    if (stored) { try { facultyDatabase = JSON.parse(stored); } catch(e) { facultyDatabase = seedDatabase; } }
+    else { facultyDatabase = seedDatabase; }
+    const ts = localStorage.getItem('edgeLastUpdated');
+    document.getElementById('lastUpdated').textContent = 'Database last updated: ' + (ts || SEED_DATE);
+}
+
+// ── Step 1 ─────────────────────────────────────────────────────────────────
+function selectUserType(type) {
+    currentUserType = type;
+    document.getElementById('btnPSU').classList.toggle('selected',   type === 'psu');
+    document.getElementById('btnOther').classList.toggle('selected',  type === 'other');
+    document.getElementById('emailArea').classList.add('visible');
+    const hint = document.getElementById('emailHint');
+    const input = document.getElementById('emailInput');
+    if (type === 'psu') {
+        hint.innerHTML    = '<strong>Penn State faculty:</strong> Enter your Penn State email address (e.g., abc123@psu.edu).';
+        input.placeholder = 'abc123@psu.edu';
+    } else {
+        hint.innerHTML    = '<strong>Not a Penn State faculty member?</strong> Enter the email address you used when you expressed interest in an EDGE collaboration. Not sure which email? Contact your EDGE coordinator.';
+        input.placeholder = 'yourname@institution.edu';
+    }
+    document.getElementById('errorMessage').style.display = 'none';
+    input.value = ''; input.focus();
+}
+
+function authenticateEmail() {
+    const input = document.getElementById('emailInput');
+    const email = input.value.trim().toLowerCase();
+    const errorDiv = document.getElementById('errorMessage');
+    errorDiv.style.display = 'none';
+    if (!email) return;
+    if (currentUserType === 'psu' && !email.endsWith('@psu.edu')) {
+        errorDiv.innerHTML = '<strong>Please use your Penn State email address</strong> (ending in @psu.edu).';
+        errorDiv.style.display = 'block'; return;
+    }
+    currentUser = facultyDatabase.find(f => (f.email||'').toLowerCase() === email);
+    if (currentUser) {
+        document.getElementById('selectedFacultyName').textContent = currentUser.name;
+        document.getElementById('selectedFacultyDetails').innerHTML = `<strong>${currentUser.campus}</strong> · ${currentUser.position}<br>Focus: ${currentUser.themes}`;
+        document.getElementById('selectedFacultyDisplay').classList.add('active');
+        document.getElementById('userTypeGrid').style.display = 'none';
+        document.getElementById('emailArea').style.display    = 'none';
+        document.getElementById('step2').classList.remove('hidden');
+        initializeRanking();
+        setTimeout(() => document.getElementById('step2').scrollIntoView({ behavior:'smooth', block:'start' }), 300);
+    } else {
+        errorDiv.innerHTML = '<strong>Email not found in our database.</strong> Please contact your EDGE coordinator to be added, or check that you are using the correct email address.';
+        errorDiv.style.display = 'block'; input.value = ''; input.focus();
+    }
+}
+
+// ── Step 2 ─────────────────────────────────────────────────────────────────
+function initializeRanking() {
+    const list = document.getElementById('rankingList');
+    list.innerHTML = rankingFactors.map((f, i) => `
+        <div class="ranking-item" data-id="${f.id}">
+            <div class="rank-badge">${i+1}</div>
+            <div class="rank-text"><div class="rank-title">${f.title}</div><div class="rank-desc">${f.desc}</div></div>
+            <div class="drag-icon">⋮⋮</div>
+        </div>`).join('');
+    new Sortable(list, { animation:150, ghostClass:'sortable-ghost', dragClass:'sortable-drag', onEnd: updateRankNumbers });
+    updateRankNumbers();
+}
+function updateRankNumbers() {
+    const items = document.querySelectorAll('.ranking-item');
+    items.forEach((item, i) => item.querySelector('.rank-badge').textContent = i+1);
+    rankingOrder = Array.from(items).map(item => item.dataset.id);
+}
+
+// ── Step 3 ─────────────────────────────────────────────────────────────────
+async function findMatches() {
+    document.getElementById('step3').classList.remove('hidden');
+    document.getElementById('step3').classList.add('matches-section','active');
+    document.getElementById('loadingMatches').style.display = 'block';
+    document.getElementById('matchesDisplay').classList.add('hidden');
+    setTimeout(() => document.getElementById('step3').scrollIntoView({ behavior:'smooth' }), 100);
+    const filters = {
+        period: document.getElementById('filterPeriod').value,
+        region: document.getElementById('filterRegion').value,
+        timezone: document.getElementById('filterTimezone').value,
+        discipline: document.getElementById('filterDiscipline').value
+    };
+    setTimeout(() => displayMatches(calculateMatches(filters)), 2000);
+}
+
+function calculateMatches(filters) {
+    let candidates = facultyDatabase.filter(f => f.id !== currentUser.id);
+    if (filters.period) candidates = candidates.filter(f => (f.implementation||'').includes(filters.period));
+    const scored = candidates.map(candidate => {
+        let score = 0; const highlights = [];
+        const uT = (currentUser.themes||'').toLowerCase().split(/[,;]/);
+        const cT = (candidate.themes||'').toLowerCase().split(/[,;]/);
+        if (uT.some(u => cT.some(c => u.trim().length>3 && c.trim().length>3 && (u.trim().includes(c.trim())||c.trim().includes(u.trim()))))) {
+            score += 30; highlights.push('Shared research interests');
+        }
+        if ((currentUser.implementation||'').split(',').some(p => (candidate.implementation||'').includes(p.trim()))) {
+            score += 25; highlights.push('Compatible schedule');
+        }
+        score += Math.random()*45;
+        return { ...candidate, score: Math.round(score), highlights };
+    });
+    return scored.sort((a,b) => b.score - a.score).slice(0,5);
+}
+
+function displayMatches(matches) {
+    document.getElementById('loadingMatches').style.display = 'none';
+    const display = document.getElementById('matchesDisplay');
+    display.classList.remove('hidden');
+    if (!matches.length) {
+        display.innerHTML = '<p style="color:#64748b;text-align:center;padding:2rem;">No matches found. Try broadening your preferences.</p>';
+        return;
+    }
+    display.innerHTML = matches.map(m => `
+        <div class="match-card" onclick="selectMatch(${m.id})">
+            <div class="match-header">
+                <div><div class="match-name">${m.name}</div><div class="match-campus">${m.campus}</div></div>
+                <div class="match-score">${m.score}%</div>
+            </div>
+            <div class="match-themes">${m.themes}</div>
+            <div class="match-highlights">${m.highlights.map(h=>`<span class="highlight-tag">✓ ${h}</span>`).join('')}</div>
+        </div>`).join('');
+}
+
+// ── Step 4 ─────────────────────────────────────────────────────────────────
+function selectMatch(partnerId) {
+    selectedPartner = facultyDatabase.find(f => f.id === partnerId);
+    document.getElementById('step3').style.display = 'none';
+    document.getElementById('step4').classList.remove('hidden');
+    document.getElementById('step4').scrollIntoView({ behavior:'smooth' });
+    generateProjectConcepts(selectedPartner);
+}
+
+async function generateProjectConcepts(partner) {
+    document.getElementById('partnershipSummary').innerHTML = `
+        <strong style="color:#0c4a6e;font-size:1.125rem;">Your Partnership:</strong>
+        <div style="margin-top:.5rem;color:#075985;">
+            <strong>${currentUser.name}</strong> (${currentUser.campus}) &nbsp;×&nbsp; <strong>${partner.name}</strong> (${partner.campus})
+        </div>`;
+    document.getElementById('loadingConcepts').style.display = 'block';
+    document.getElementById('conceptsDisplay').classList.add('hidden');
+    document.getElementById('conceptLoadingText').textContent = `Searching for ${currentUser.name}'s publications...`;
+    await sleep(1500);
+    document.getElementById('conceptLoadingText').textContent = `Searching for ${partner.name}'s publications...`;
+    await sleep(1500);
+    document.getElementById('conceptLoadingText').textContent = 'Analyzing research overlap and generating concepts...';
+    await sleep(2000);
+    generatedConcepts = generateMockConcepts(partner);
+    selectedConceptIdx = null;
+    displayConcepts(generatedConcepts);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function generateMockConcepts(partner) {
+    return [
+        { title:"Digital Equity in Global Education",
+          subtitle:"Technology access · inclusive learning · cross-cultural pedagogy",
+          description:"Students collaborate to design accessible digital learning solutions that address educational equity challenges in both contexts. Teams analyze barriers to technology access and co-create inclusive educational technology interventions grounded in both institutions' communities.",
+          anchor:`${currentUser.name}: digital learning and inclusive pedagogy research · ${partner.name}: community-based teaching methodologies and student engagement`,
+          activities:["Comparative analysis of digital access barriers in each country","Co-design of an inclusive technology intervention with local community input","Cross-team knowledge exchange: synchronous workshop sessions","Final presentation to a simulated stakeholder panel"],
+          assessment:["Individual digital equity reflection paper","Team comparative analysis report","Co-designed intervention proposal","Peer assessment of collaborative contribution"],
+          aacu:["Cultural Diversity","Global Self-Awareness","Perspective Taking"],
+          nace:["Global/Intercultural Fluency","Critical Thinking & Problem Solving","Teamwork & Collaboration"],
+          sdgs:["SDG 4: Quality Education","SDG 10: Reduced Inequalities"],
+          tags:[{text:"SDG 4: Quality Education",type:"sdg"},{text:"Global/Intercultural Fluency",type:"nace"},{text:"Cultural Diversity",type:"aacu"}] },
+
+        { title:"Cross-Cultural Community Engagement",
+          subtitle:"Service-learning · social justice · reciprocal partnerships",
+          description:"Students examine community engagement practices in both countries, identifying culturally-specific approaches to social change. Teams develop comparative case studies and propose culturally-responsive engagement strategies for real community partners.",
+          anchor:`${currentUser.name}: community partnership and civic engagement frameworks · ${partner.name}: university-community outreach programs and student service initiatives`,
+          activities:["Community mapping exercise in each local context","Comparative case study of engagement models","Co-design of a service-learning partnership proposal","Structured peer review of partner team's proposal"],
+          assessment:["Community context analysis (individual)","Comparative engagement essay","Team service-learning proposal with reciprocity rationale","Reflective journal on cross-cultural meaning of community"],
+          aacu:["Personal & Social Responsibility","Understanding Global Systems","Global Self-Awareness"],
+          nace:["Teamwork & Collaboration","Global/Intercultural Fluency","Professionalism & Work Ethic"],
+          sdgs:["SDG 4: Quality Education","SDG 11: Sustainable Cities & Communities","SDG 17: Partnerships for the Goals"],
+          tags:[{text:"SDG 10: Reduced Inequalities",type:"sdg"},{text:"Personal & Social Responsibility",type:"aacu"},{text:"Teamwork & Collaboration",type:"nace"}] },
+
+        { title:"Innovation for Social Impact",
+          subtitle:"Design thinking · human-centered problem solving · social entrepreneurship",
+          description:"Students apply design thinking to real social challenges identified by community partners in each country. Teams move through empathy, define, ideate, and prototype stages together, producing a social innovation brief grounded in genuine community need.",
+          anchor:`${currentUser.name}: innovation pedagogy and experiential learning · ${partner.name}: entrepreneurship education and community program development`,
+          activities:["Empathy mapping with a real community partner","Problem definition and design challenge framing workshop","Cross-national ideation sprint","Low-fidelity prototype and community stakeholder feedback session"],
+          assessment:["Empathy map and problem statement (team)","Social innovation brief with community impact rationale","Individual reflection on design thinking across cultures","Community partner feedback incorporated into final grade"],
+          aacu:["Perspective Taking","Understanding Global Systems","Cultural Diversity"],
+          nace:["Critical Thinking & Problem Solving","Leadership","Career & Self-Development"],
+          sdgs:["SDG 8: Decent Work & Economic Growth","SDG 11: Sustainable Cities & Communities","SDG 17: Partnerships"],
+          tags:[{text:"SDG 17: Partnerships",type:"sdg"},{text:"Critical Thinking",type:"nace"},{text:"Perspective Taking",type:"aacu"}] },
+
+        { title:"Technology Access and Social Justice",
+          subtitle:"Digital divides · equity policy · cross-border advocacy",
+          description:"Students investigate how technology access intersects with social justice across both countries. Teams analyze digital equity policies, map community-level impacts, and develop evidence-based recommendations for institutions or policymakers.",
+          anchor:`${currentUser.name}: technology and equity research · ${partner.name}: policy analysis and advocacy in higher education contexts`,
+          activities:["Policy scan: digital equity frameworks in each country","Community-level impact mapping using local data","Cross-team debate: policy approaches and tradeoffs","Co-authored policy brief addressed to a real institution or government body"],
+          assessment:["Individual policy environment brief","Team impact map and analysis","Policy brief or advocacy memo (team)","Peer review with structured feedback rubric"],
+          aacu:["Understanding Global Systems","Global Self-Awareness","Personal & Social Responsibility"],
+          nace:["Equity & Inclusion","Critical Thinking & Problem Solving","Global/Intercultural Fluency"],
+          sdgs:["SDG 5: Gender Equality","SDG 9: Industry, Innovation & Infrastructure","SDG 10: Reduced Inequalities"],
+          tags:[{text:"SDG 5: Gender Equality",type:"sdg"},{text:"Equity & Inclusion",type:"nace"},{text:"Understanding Global Systems",type:"aacu"}] },
+
+        { title:"Collaborative Solutions for Underserved Communities",
+          subtitle:"Participatory research · marginalized populations · cross-national practice",
+          description:"Students partner with organizations serving marginalized communities in both countries to identify needs and co-design interventions. Projects emphasize participatory methods, community voice, and culturally-grounded problem-solving.",
+          anchor:`${currentUser.name}: participatory research and community-centered practice · ${partner.name}: outreach to underserved student and community populations`,
+          activities:["Organization and community partner identification in each context","Participatory needs assessment using shared methodology","Cross-national co-design of one intervention concept","Presentation to community partners and structured feedback exchange"],
+          assessment:["Community partner profile and needs summary (individual)","Participatory needs assessment report (team)","Intervention concept proposal with community voice evidence","Reflective portfolio entry on positionality and privilege"],
+          aacu:["Global Self-Awareness","Cultural Diversity","Perspective Taking"],
+          nace:["Leadership","Equity & Inclusion","Teamwork & Collaboration"],
+          sdgs:["SDG 1: No Poverty","SDG 10: Reduced Inequalities","SDG 11: Sustainable Cities & Communities"],
+          tags:[{text:"SDG 11: Sustainable Cities",type:"sdg"},{text:"Global Self-Awareness",type:"aacu"},{text:"Leadership",type:"nace"}] }
+    ];
+}
+
+function displayConcepts(concepts) {
+    document.getElementById('loadingConcepts').style.display = 'none';
+    document.getElementById('conceptsDisplay').classList.remove('hidden');
+    document.getElementById('conceptsList').innerHTML = concepts.map((c,i) => `
+        <div class="concept-card" id="concept-card-${i}" onclick="selectConcept(${i})">
+            <div class="concept-header">
+                <input type="radio" name="conceptRadio" class="concept-radio" id="concept-radio-${i}"
+                       onclick="event.stopPropagation(); selectConcept(${i})">
+                <div style="flex:1;"><div class="concept-title">${c.title}</div></div>
+            </div>
+            <div class="concept-subtitle">${c.subtitle}</div>
+            <div class="concept-description">${c.description}</div>
+            <div class="concept-tags">${c.tags.map(t=>`<span class="concept-tag ${t.type}">${t.text}</span>`).join('')}</div>
+        </div>`).join('');
+    document.getElementById('buildConceptBtn').classList.add('hidden');
+}
+
+function selectConcept(i) {
+    // Deselect all
+    document.querySelectorAll('.concept-card').forEach(c => c.classList.remove('selected'));
+    document.querySelectorAll('.concept-radio').forEach(r => r.checked = false);
+    // Select chosen
+    document.getElementById(`concept-card-${i}`).classList.add('selected');
+    document.getElementById(`concept-radio-${i}`).checked = true;
+    selectedConceptIdx = i;
+    document.getElementById('buildConceptBtn').classList.remove('hidden');
+}
+
+// ── Step 5 ─────────────────────────────────────────────────────────────────
+async function buildOutConcept() {
+    if (selectedConceptIdx === null) return;
+    builtConcept = generatedConcepts[selectedConceptIdx];
+
+    document.getElementById('step5').classList.remove('hidden');
+    document.getElementById('loadingFullDesc').style.display = 'block';
+    document.getElementById('fullDescContent').classList.add('hidden');
+    document.getElementById('step5').scrollIntoView({ behavior:'smooth' });
+
+    await sleep(2500); // Simulate generation
+
+    renderFullDescription(builtConcept);
+    document.getElementById('loadingFullDesc').style.display = 'none';
+    document.getElementById('fullDescContent').classList.remove('hidden');
+}
+
+function renderFullDescription(c) {
+    const partner = selectedPartner;
+    const user    = currentUser;
+
+    document.getElementById('fullDescPanel').innerHTML = `
+        <div class="full-desc-section">
+            <div class="full-desc-label">EDGE Partnership — Project Concept</div>
+            <div class="full-desc-title">${c.title}</div>
+            <div class="full-desc-subtitle">${c.subtitle}</div>
+            <div style="color:#475569; margin-top:.5rem;">
+                <strong>${user.name}</strong> (${user.campus}) &nbsp;×&nbsp; <strong>${partner.name}</strong> (${partner.campus})
+            </div>
+        </div>
+
+        <div class="full-desc-section">
+            <div class="full-desc-label">Scholarship Anchor</div>
+            <div class="full-desc-anchor">${c.anchor}</div>
+        </div>
+
+        <div class="full-desc-section">
+            <div class="full-desc-label">Project Description</div>
+            <p style="color:#334155; line-height:1.8;">${c.description}</p>
+        </div>
+
+        <div class="full-desc-section">
+            <div class="full-desc-label">Student Activities · Assessment · Outcomes</div>
+            <div class="desc-grid">
+                <div class="desc-grid-item">
+                    <h4>Student Activities</h4>
+                    <ul>${c.activities.map(a=>`<li>${a}</li>`).join('')}</ul>
+                </div>
+                <div class="desc-grid-item">
+                    <h4>Assessment Methods</h4>
+                    <ul>${c.assessment.map(a=>`<li>${a}</li>`).join('')}</ul>
+                </div>
+                <div class="desc-grid-item">
+                    <h4>Learning Outcomes</h4>
+                    <p style="font-size:.85rem;font-weight:600;color:#92400e;margin-bottom:.4rem;">AAC&amp;U Global Learning</p>
+                    <ul style="margin-bottom:.75rem;">${c.aacu.map(a=>`<li>${a}</li>`).join('')}</ul>
+                    <p style="font-size:.85rem;font-weight:600;color:#3730a3;margin-bottom:.4rem;">NACE Career Competencies</p>
+                    <ul>${c.nace.map(a=>`<li>${a}</li>`).join('')}</ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="full-desc-section">
+            <div class="full-desc-label">UN Sustainable Development Goals</div>
+            <div class="tag-row">${c.sdgs.map(s=>`<span class="concept-tag sdg">${s}</span>`).join('')}</div>
+        </div>
+
+        <div class="full-desc-section" style="background:white;border-radius:10px;padding:1.25rem;border:1px solid #e2e8f0;">
+            <div class="full-desc-label" style="margin-bottom:.75rem;">Shared Logistics Guide</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;font-size:.9rem;color:#475569;">
+                <div><strong style="color:#0f172a;">Recommended duration</strong><br>8–11 weeks (EJRM guideline: 4–15 weeks)</div>
+                <div><strong style="color:#0f172a;">Synchronous sessions</strong><br>2–3 video sessions; async-first design recommended</div>
+                <div><strong style="color:#0f172a;">Team composition</strong><br>3–4 students per mixed international team</div>
+                <div><strong style="color:#0f172a;">IRB / research ethics</strong><br>Contact Laura Cruz at Penn State early — most EDGE projects qualify for exempt review</div>
+                <div><strong style="color:#0f172a;">Assessment tools</strong><br>EDGE Toolkit pre/post surveys (CQ Scale, ISS); AAC&amp;U Global Learning VALUE rubric</div>
+                <div><strong style="color:#0f172a;">Next steps</strong><br>Discuss concept fit → exchange syllabi → co-design learning objectives</div>
+            </div>
+        </div>
+
+        <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid #e2e8f0;font-size:.8125rem;color:#94a3b8;font-style:italic;">
+            Prepared using the EDGE Journey Resource Map (EJRM) | Penn State University &amp; Monash University (CC BY-NC 4.0) · 
+            Generated by the EDGE Idea Generator · To be refined upon exchange of syllabi
+        </div>`;
+}
+
+// ── Actions ────────────────────────────────────────────────────────────────
+function requestIntroduction() {
+    if (!builtConcept || !selectedPartner || !currentUser) return;
+    const subject = encodeURIComponent(`EDGE Introduction Request: ${currentUser.name} × ${selectedPartner.name}`);
+    const body    = encodeURIComponent(
+`Hello,
+
+I am writing to request an introduction to a potential EDGE collaboration partner.
+
+My name: ${currentUser.name}
+My institution: ${currentUser.campus}
+Potential partner: ${selectedPartner.name} (${selectedPartner.campus})
+Project concept of interest: ${builtConcept.title}
+
+I used the EDGE Idea Generator to explore this partnership and would appreciate a facilitated introduction.
+
+Thank you,
+${currentUser.name}`
+    );
+    window.location.href = `mailto:${COORDINATOR_EMAIL}?subject=${subject}&body=${body}`;
+
+    // Show confirmation
+    document.getElementById('step5').classList.add('hidden');
+    document.getElementById('step6').classList.remove('hidden');
+    document.getElementById('confirmPanel').innerHTML = `
+        <div class="confirm-icon">✉️</div>
+        <div class="confirm-title">Introduction Requested!</div>
+        <div class="confirm-text">
+            Your email client should have opened with a pre-filled message to the EDGE coordinator.<br><br>
+            If it didn't open automatically, please email <a href="mailto:${COORDINATOR_EMAIL}" style="color:#0ea5e9;">${COORDINATOR_EMAIL}</a> directly and mention that you'd like an introduction between <strong>${currentUser.name}</strong> and <strong>${selectedPartner.name}</strong> for the project concept <em>${builtConcept.title}</em>.
+        </div>
+        <button class="btn btn-outline" onclick="startOver()">← Start Over</button>`;
+    document.getElementById('step6').scrollIntoView({ behavior:'smooth' });
+}
+
+function showFeedback() {
+    document.getElementById('feedbackPanel').classList.remove('hidden');
+    document.getElementById('feedbackPanel').scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+function hideFeedback() {
+    document.getElementById('feedbackPanel').classList.add('hidden');
+}
+
+function submitFeedback() {
+    const reason = document.getElementById('feedbackReason').value;
+    const text   = document.getElementById('feedbackText').value.trim();
+    // In production this would POST to a backend; for now just log and reset
+    console.log('Feedback submitted:', { reason, text, user: currentUser?.name, partner: selectedPartner?.name, concept: builtConcept?.title });
+    startOver();
+}
+
+function startOver() {
+    // Reset state
+    currentUser = null; currentUserType = null; selectedPartner = null;
+    generatedConcepts = []; selectedConceptIdx = null; builtConcept = null;
+
+    // Hide all steps
+    ['step2','step3','step4','step5','step6'].forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.add('hidden');
+        el.style.display = '';
+    });
+
+    // Reset step 1
+    document.getElementById('userTypeGrid').style.display = '';
+    document.getElementById('emailArea').classList.remove('visible');
+    document.getElementById('emailArea').style.display = '';
+    document.getElementById('emailInput').value = '';
+    document.getElementById('selectedFacultyDisplay').classList.remove('active');
+    document.getElementById('errorMessage').style.display = 'none';
+    document.getElementById('btnPSU').classList.remove('selected');
+    document.getElementById('btnOther').classList.remove('selected');
+
+    // Reset feedback panel
+    document.getElementById('feedbackPanel').classList.add('hidden');
+    document.getElementById('feedbackReason').value = '';
+    document.getElementById('feedbackText').value   = '';
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Word download ──────────────────────────────────────────────────────────
+async function downloadWord() {
+    if (!builtConcept || !window.docx) {
+        alert('Word download is not available right now. Please try again in a moment.');
+        return;
+    }
+    const c = builtConcept;
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+            AlignmentType, BorderStyle, WidthType, ShadingType, HeadingLevel,
+            VerticalAlign } = window.docx;
+
+    const border = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' };
+    const borders = { top: border, bottom: border, left: border, right: border };
+
+    function heading(text, color = '0f172a') {
+        return new Paragraph({
+            spacing: { before: 240, after: 120 },
+            children: [new TextRun({ text, bold: true, size: 22, color, font: 'Calibri' })]
+        });
+    }
+    function body(text) {
+        return new Paragraph({
+            spacing: { after: 100 },
+            children: [new TextRun({ text, size: 20, font: 'Calibri' })]
+        });
+    }
+    function bullet(text) {
+        return new Paragraph({
+            bullet: { level: 0 },
+            spacing: { after: 60 },
+            children: [new TextRun({ text, size: 20, font: 'Calibri' })]
+        });
+    }
+    function label(text) {
+        return new Paragraph({
+            spacing: { before: 200, after: 60 },
+            children: [new TextRun({ text: text.toUpperCase(), bold: true, size: 18, color: '0ea5e9', font: 'Calibri' })]
+        });
+    }
+    function spacer() { return new Paragraph({ spacing: { after: 80 }, children: [] }); }
+
+    const doc = new Document({
+        sections: [{
+            properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1080, right: 1080, bottom: 1080, left: 1080 } } },
+            children: [
+                // Title block
+                new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 },
+                    children: [new TextRun({ text: 'EDGE PARTNERSHIP — PROJECT CONCEPT', bold: true, size: 28, color: '0f172a', font: 'Calibri' })] }),
+                new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 },
+                    children: [new TextRun({ text: c.title, bold: true, size: 36, color: '0ea5e9', font: 'Calibri' })] }),
+                new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 },
+                    children: [new TextRun({ text: c.subtitle, italics: true, size: 22, color: '475569', font: 'Calibri' })] }),
+                new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 240 },
+                    children: [new TextRun({ text: `${currentUser.name} (${currentUser.campus})  ×  ${selectedPartner.name} (${selectedPartner.campus})`, size: 20, font: 'Calibri' })] }),
+
+                label('Scholarship Anchor'),
+                body(c.anchor),
+                spacer(),
+
+                label('Project Description'),
+                body(c.description),
+                spacer(),
+
+                label('Student Activities'),
+                ...c.activities.map(a => bullet(a)),
+                spacer(),
+
+                label('Assessment Methods'),
+                ...c.assessment.map(a => bullet(a)),
+                spacer(),
+
+                label('AAC&U Global Learning Outcomes'),
+                ...c.aacu.map(a => bullet(a)),
+                spacer(),
+
+                label('NACE Career Competencies'),
+                ...c.nace.map(a => bullet(a)),
+                spacer(),
+
+                label('UN Sustainable Development Goals'),
+                ...c.sdgs.map(s => bullet(s)),
+                spacer(),
+
+                label('Shared Logistics Guide'),
+                body('Recommended duration: 8–11 weeks'),
+                body('Synchronous sessions: 2–3 video sessions; async-first design recommended'),
+                body('Team composition: 3–4 students per mixed international team'),
+                body('IRB / research ethics: Contact Laura Cruz at Penn State early — most EDGE projects qualify for exempt review'),
+                body('Assessment tools: EDGE Toolkit pre/post surveys (CQ Scale, ISS); AAC&U Global Learning VALUE rubric'),
+                body('Next steps: Discuss concept fit → exchange syllabi → co-design learning objectives'),
+                spacer(),
+
+                new Paragraph({ spacing: { before: 240 },
+                    children: [new TextRun({ text: 'Prepared using the EDGE Journey Resource Map (EJRM) | Penn State University & Monash University (CC BY-NC 4.0) · Generated by the EDGE Idea Generator · To be refined upon exchange of syllabi', italics: true, size: 16, color: '94a3b8', font: 'Calibri' })] })
+            ]
+        }]
+    });
+
+    const blob = await Packer.toBlob(doc);
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `EDGE_Concept_${c.title.replace(/[^a-z0-9]/gi,'_').substring(0,40)}.docx`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// ── Admin ──────────────────────────────────────────────────────────────────
+function openAdmin() {
+    document.getElementById('adminOverlay').classList.add('visible');
+    document.getElementById('adminPasswordInput').focus();
+    document.getElementById('dbCount').textContent = facultyDatabase.length;
+}
+function closeAdmin() {
+    document.getElementById('adminOverlay').classList.remove('visible');
+    document.getElementById('adminPasswordInput').value = '';
+    document.getElementById('adminLoginError').style.display = 'none';
+    document.getElementById('adminLoginArea').style.display  = 'block';
+    document.getElementById('adminPanel').classList.remove('visible');
+    document.getElementById('uploadStatus').classList.remove('visible');
+    document.getElementById('uploadError').classList.remove('visible');
+}
+function handleOverlayClick(e) { if (e.target === document.getElementById('adminOverlay')) closeAdmin(); }
+function checkAdminPassword() {
+    if (document.getElementById('adminPasswordInput').value === ADMIN_PASSWORD) {
+        document.getElementById('adminLoginArea').style.display = 'none';
+        document.getElementById('adminPanel').classList.add('visible');
+        document.getElementById('dbCount').textContent = facultyDatabase.length;
+    } else {
+        document.getElementById('adminLoginError').style.display = 'block';
+        document.getElementById('adminPasswordInput').value = '';
+        document.getElementById('adminPasswordInput').focus();
+    }
+}
+
+// ── File upload ────────────────────────────────────────────────────────────
+function handleDragOver(e)  { e.preventDefault(); document.getElementById('uploadZone').classList.add('dragover'); }
+function handleDragLeave()  { document.getElementById('uploadZone').classList.remove('dragover'); }
+function handleDrop(e) { e.preventDefault(); document.getElementById('uploadZone').classList.remove('dragover'); const f = e.dataTransfer.files[0]; if (f) processFile(f); }
+function handleFileSelect(e) { const f = e.target.files[0]; if (f) processFile(f); e.target.value = ''; }
+
+function processFile(file) {
+    document.getElementById('uploadStatus').classList.remove('visible');
+    document.getElementById('uploadError').classList.remove('visible');
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'csv') { const r = new FileReader(); r.onload = e => parseCSV(e.target.result, file.name); r.readAsText(file); }
+    else if (ext === 'xlsx' || ext === 'xls') { const r = new FileReader(); r.onload = e => parseXLSX(e.target.result, file.name); r.readAsArrayBuffer(file); }
+    else { showUploadError('Please upload a .csv or .xlsx file.'); }
+}
+
+function parseCSV(text, filename) {
+    try {
+        const lines = text.trim().split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g,''));
+        const required = ['name','email','campus','position','themes','implementation'];
+        const missing  = required.filter(r => !headers.includes(r));
+        if (missing.length) { showUploadError(`Missing required columns: ${missing.join(', ')}`); return; }
+        const rows = lines.slice(1).map((line, i) => {
+            const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g,''));
+            const obj = { id: i }; headers.forEach((h,j) => obj[h] = vals[j]||''); return obj;
+        }).filter(r => r.name && r.email);
+        saveDatabase(rows, filename);
+    } catch(e) { showUploadError('Could not parse the CSV. Please check the format and try again.'); }
+}
+
+function parseXLSX(buffer, filename) {
+    try {
+        const wb   = XLSX.read(buffer, { type:'array' });
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        const norm = rows.map((row, i) => { const obj = { id:i }; Object.keys(row).forEach(k => obj[k.toLowerCase().trim()] = row[k]); return obj; }).filter(r => r.name && r.email);
+        if (norm.length) { const missing = ['name','email','campus','position','themes','implementation'].filter(r => !(r in norm[0])); if (missing.length) { showUploadError(`Missing required columns: ${missing.join(', ')}`); return; } }
+        saveDatabase(norm, filename);
+    } catch(e) { showUploadError('Could not parse the Excel file. Please check the format and try again.'); }
+}
+
+function saveDatabase(rows, filename) {
+    facultyDatabase = rows;
+    localStorage.setItem('edgeFacultyDatabase', JSON.stringify(rows));
+    const now = new Date().toLocaleString('en-US', { month:'long', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit', hour12:true });
+    localStorage.setItem('edgeLastUpdated', now);
+    document.getElementById('lastUpdated').textContent = 'Database last updated: ' + now;
+    document.getElementById('dbCount').textContent = rows.length;
+    showUploadSuccess(`✓ Database updated from <strong>${filename}</strong> — ${rows.length} faculty records loaded.`);
+}
+function showUploadSuccess(msg) { const el = document.getElementById('uploadStatus'); el.innerHTML = msg; el.classList.add('visible'); }
+function showUploadError(msg)   { const el = document.getElementById('uploadError');  el.innerHTML = '<strong>Upload failed:</strong> ' + msg; el.classList.add('visible'); }
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    loadDatabase();
+    document.getElementById('emailInput').addEventListener('keypress', e => { if (e.key==='Enter') authenticateEmail(); });
+    document.getElementById('adminPasswordInput').addEventListener('keypress', e => { if (e.key==='Enter') checkAdminPassword(); });
+});
+</script>
+</body>
+</html>
+
